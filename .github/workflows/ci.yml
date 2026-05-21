@@ -48,16 +48,28 @@ jobs:
       - name: go test
         run: go test -v -race -coverprofile=coverage.out ./...
       - name: enforce 100% library coverage
-        # House style: 100% statement coverage on the library is the
-        # floor. The CLI under cmd/ has signal-handling / os.Exit
-        # paths plus the unreachable sealed-interface default arm in
-        # formatES that don't unit-test cleanly, so coverage is
-        # enforced on the library package only.
+        # House style: 100% statement coverage on the library packages
+        # is the floor. The cmd/beastmux entry point has main() / signal
+        # / os.Exit paths that don't unit-test cleanly, so coverage is
+        # enforced on the library packages only — integration tests
+        # exercise the cmd layer end-to-end in a separate step.
         run: |
-          pct=$(go test -coverprofile=lib.out github.com/hyperized/modes >/dev/null \
+          pct=$(go test -coverprofile=lib.out ./dedup/... ./sourcemgr/... >/dev/null \
             && go tool cover -func=lib.out | awk '/^total:/ {gsub("%","",$3); print $3; exit}')
           echo "library coverage: ${pct}%"
           awk -v p="$pct" 'BEGIN {exit !(p+0 >= 100.0)}' || { echo "library coverage ${pct}% < 100.0%"; exit 1; }
+
+  test-integration:
+    name: test-integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: go test -tags=integration
+        run: go test -race -tags=integration ./...
 
   build:
     name: build
@@ -68,5 +80,5 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: go build cmd/modes-decode
-        run: go build ./cmd/modes-decode
+      - name: go build cmd/beastmux
+        run: go build ./cmd/beastmux
