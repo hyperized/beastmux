@@ -1,0 +1,72 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: gofmt
+        run: |
+          go fmt ./...
+          git diff --exit-code
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.12
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: go test
+        run: go test -v -race -coverprofile=coverage.out ./...
+      - name: enforce 100% library coverage
+        # House style: 100% statement coverage on the library is the
+        # floor. The CLI under cmd/ has signal-handling / os.Exit
+        # paths plus the unreachable sealed-interface default arm in
+        # formatES that don't unit-test cleanly, so coverage is
+        # enforced on the library package only.
+        run: |
+          pct=$(go test -coverprofile=lib.out github.com/hyperized/modes >/dev/null \
+            && go tool cover -func=lib.out | awk '/^total:/ {gsub("%","",$3); print $3; exit}')
+          echo "library coverage: ${pct}%"
+          awk -v p="$pct" 'BEGIN {exit !(p+0 >= 100.0)}' || { echo "library coverage ${pct}% < 100.0%"; exit 1; }
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: go build cmd/modes-decode
+        run: go build ./cmd/modes-decode

@@ -1,0 +1,14 @@
+/beastmux
+/beastmux-*
+PLAN.md
+*.test
+*.out
+coverage.*
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+.claude/
+/dist/

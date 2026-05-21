@@ -1,0 +1,92 @@
+# Sample systemd unit for the beastmux BEAST-stream consolidator.
+#
+# beastmux fans N upstream Mode S BEAST TCP streams into a single
+# deduplicated stream. It does not touch hardware, so the unit can
+# run as an unprivileged user with the standard service hardening
+# directives — much stricter than demod1090's, which needs raw USB.
+#
+# Deployment-specific values you will likely change:
+#   - User / Group       — pick whichever account owns the binary.
+#   - WorkingDirectory   — match wherever the binary lives.
+#   - ExecStart          — list every upstream BEAST source as a
+#                          separate --source flag. Adjust --listen
+#                          if you are colocating with a dump1090 /
+#                          readsb instance already on :30005.
+#
+# Install:
+#   sudo install -m 0644 beastmux.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now beastmux.service
+
+[Unit]
+Description=beastmux Mode S BEAST stream consolidator
+Documentation=https://github.com/hyperized/beastmux
+After=network-online.target
+Wants=network-online.target
+
+# Bound restart-loops: if the unit fails 5 times within a minute
+# (e.g. all upstream sources are unreachable and the daemon keeps
+# exiting on a fatal config error), give up rather than thrashing.
+# systemctl reset-failed clears the counter once the cause is fixed.
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=beastmux
+Group=beastmux
+WorkingDirectory=/opt/beastmux
+
+# --source receiver-a:30005     repeat per upstream receiver.
+# --listen :30005               consolidated BEAST stream port.
+# --dedup-window 500ms          payload-key TTL.
+# --stats-interval 30s          per-30s slog.Info summary line.
+# --log-format json             structured logs into journald.
+ExecStart=/opt/beastmux/beastmux \
+    --source receiver-a.local:30005 \
+    --source receiver-b.local:30005 \
+    --listen :30005 \
+    --dedup-window 500ms \
+    --stats-interval 30s \
+    --log-format json
+
+# Stdout-hex is off by default; if you enable it for one-off debug
+# runs, expect ~1 KiB/s into the journal. Leave stdout dropped here
+# so journald only carries stderr (slog output) at proper severity.
+StandardOutput=null
+StandardError=journal
+
+Restart=on-failure
+RestartSec=2s
+
+# Hardening — beastmux is a pure-TCP daemon with no special device
+# or capability requirements, so we can lock it down tighter than
+# the demod1090 unit. Disable everything by default and re-allow
+# only the network namespaces it actually needs.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectHostname=true
+ProtectClock=true
+ProtectProc=invisible
+ProcSubset=pid
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
