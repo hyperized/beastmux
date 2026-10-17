@@ -142,6 +142,31 @@ beastmux \
 
 tar1090 dials `:30005` as before. Stats land in journald as one structured log line every 30 s.
 
+## Container image
+
+CI publishes `ghcr.io/hyperized/beastmux` for linux/arm64 and linux/amd64. The `image` job in `.github/workflows/ci.yml` runs only after format, lint, test, test-integration and build have passed. Each commit on main gets a `sha-<short sha>` tag and moves `latest`. Pushing a `v*` tag publishes that tag name too. Pull requests build both platforms without pushing, so a broken Dockerfile fails the PR. The binary's version comes from `git describe --tags --always`.
+
+The job writes the pushed digest, as `ghcr.io/hyperized/beastmux@sha256:...`, to the run's summary page and as a notice on the run. A deployment should pin that digest, because `latest` moves with every commit to main and any tag can be pushed over.
+
+GitHub creates the package as private on the first push, and there is no REST endpoint for changing a package's visibility. Making it public is a one-time step in the web UI after the first image lands: github.com/users/hyperized/packages/container/beastmux/settings, Danger Zone, Change visibility, Public. Check that it took with:
+
+```sh
+gh api users/hyperized/packages/container/beastmux --jq .visibility   # needs the read:packages scope
+```
+
+The image holds the static binary on `gcr.io/distroless/static-debian12` and runs as UID/GID 10001. There is no shell or package manager in it.
+
+To build it locally:
+
+```sh
+docker buildx build --platform linux/arm64 \
+    --build-arg VERSION=$(git describe --tags --always --dirty) \
+    -t beastmux:local --load .
+docker run --rm beastmux:local --version
+```
+
+The build stage runs on the builder's own platform and cross-compiles, so an arm64 image builds without QEMU.
+
 ## Operations
 
 ### Stats log line
