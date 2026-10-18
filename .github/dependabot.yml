@@ -22,8 +22,8 @@ updates:
       github-actions:
         patterns: ['*']
 
-  # The base images in the Dockerfile are pinned by digest; this keeps the
-  # tag and the digest moving together.
+  # The Go builder image in the Dockerfile is pinned by digest; this keeps
+  # the tag and the digest moving together. The runtime stage is scratch.
   - package-ecosystem: docker
     directory: /
     schedule:

@@ -154,7 +154,7 @@ GitHub creates the package as private on the first push, and there is no REST en
 gh api users/hyperized/packages/container/beastmux --jq .visibility   # needs the read:packages scope
 ```
 
-The image holds the static binary on `gcr.io/distroless/static-debian12` and runs as UID/GID 10001. There is no shell or package manager in it.
+The image is the static binary on `scratch`, nothing else, and runs as UID/GID 10001. There is no shell, no libc and no certificate store in it; beastmux needs none of them.
 
 To build it locally:
 
