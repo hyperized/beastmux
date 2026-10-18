@@ -21,9 +21,6 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" \
         -o /out/beastmux ./cmd/beastmux
 
-# Scratch, not distroless: the binary is static, speaks plain TCP and loads no
-# time zone, so CA certificates, tzdata and a passwd file would be dead weight
-# with a digest to keep current and CVE reports to wave away.
 FROM scratch
 
 COPY --from=build /out/beastmux /beastmux
