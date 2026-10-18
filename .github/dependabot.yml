@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    groups:
+      gomod:
+        patterns: ['*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps(ci)
+    groups:
+      github-actions:
+        patterns: ['*']
+
+  # The Go builder image in the Dockerfile is pinned by digest; this keeps
+  # the tag and the digest moving together. The runtime stage is scratch.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps(docker)
+    groups:
+      docker:
+        patterns: ['*']
