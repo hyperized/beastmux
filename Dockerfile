@@ -2,7 +2,7 @@
 
 # The build stage runs on the builder's own platform and cross-compiles, so an
 # arm64 image builds at native speed on an amd64 runner instead of under QEMU.
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine@sha256:3082400e369fa24d5fc60bca20edab3f6d604e0c5a690ec66b295eff4dd87ade AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:eb61c3873c97416fff0116553fff65d67a3549f72e11d9758849a689cdd8b523 AS build
 
 ARG TARGETOS
 ARG TARGETARCH
